@@ -7,6 +7,10 @@ from basic.blog.managers import PublicManager
 
 import tagging
 
+from django_markup.fields import MarkupField
+from django_markup.markup import formatter
+from django.utils.safestring import mark_safe
+
 
 class Category(models.Model):
     """Category model."""
@@ -39,8 +43,11 @@ class Post(models.Model):
     title           = models.CharField(_('title'), max_length=200)
     slug            = models.SlugField(_('slug'), unique_for_date='publish')
     author          = models.ForeignKey(User, blank=True, null=True)
+	markup          = MarkupField(default='markdown')
     body            = models.TextField(_('body'))
+	body_markup     = models.TextField(_('markup body'), editable=True, blank=True, null=True)
     tease           = models.TextField(_('tease'), blank=True)
+	visits          = models.IntegerField(_('visits'), default=0, editable=False)
     status          = models.IntegerField(_('status'), choices=STATUS_CHOICES, default=2)
     allow_comments  = models.BooleanField(_('allow comments'), default=True)
     publish         = models.DateTimeField(_('publish'))
@@ -64,6 +71,11 @@ class Post(models.Model):
 
     def __unicode__(self):
         return u'%s' % self.title
+		
+	def save(self, *args, **kwargs):
+		body_markup = mark_safe(formatter(self.body, filter_name=self.markup))
+		self.body_markup = body_markup
+		super(Post, self).save(*args, **kwargs)
 
     @permalink
     def get_absolute_url(self):
