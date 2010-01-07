@@ -4,6 +4,7 @@ from django.http import Http404
 from django.views.generic import date_based, list_detail
 from django.db.models import Q
 from basic.blog.models import *
+from tagging.models import Tag, TaggedItem
 
 import datetime
 import re
@@ -58,6 +59,21 @@ post_archive_day.__doc__ = date_based.archive_day.__doc__
 
 
 def post_detail(request, slug, year, month, day, **kwargs):
+    '''
+    Displays post detail. If user is superuser, view will display
+    unpublished post detail for previewing purposes.
+    '''
+	
+    #grab the post and update view count
+    from django.db.models import F
+    post = Post.objects.get(slug=slug)
+
+    if not request.user.is_superuser and post.status != 2:
+        raise Http404
+ 
+    post.visits = F('visits') + 1
+    post.save()
+	
     return date_based.object_detail(
         request,
         year = year,
